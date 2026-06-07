@@ -105,16 +105,15 @@ class ZawTopNav extends HTMLElement {
   }
 
   _handleClick(e) {
-    const target = e.target;
-
-    const userArea = target.closest('.top-nav-user');
+    const path = e.composedPath();
+    const userArea = path.find(el => el.classList && el.classList.contains('top-nav-user'));
     if (userArea) {
       this._dropdownOpen = !this._dropdownOpen;
       this.render();
       return;
     }
 
-    const ddItem = target.closest('.top-nav-dropdown-item');
+    const ddItem = path.find(el => el.classList && el.classList.contains('top-nav-dropdown-item'));
     if (ddItem) {
       if (ddItem.dataset.action === 'logout') {
         this.logout();
