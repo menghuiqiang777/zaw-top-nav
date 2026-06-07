@@ -1,0 +1,8 @@
+{
+  "name": "zaw-top-nav",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "cp src/zaw-top-nav.js ../../common/nginx/top-nav/zaw-top-nav.js"
+  }
+}
