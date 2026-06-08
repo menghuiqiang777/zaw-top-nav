@@ -14,7 +14,6 @@ const style = `
 .top-nav-container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   height: var(--top-nav-height);
   padding: 0 24px;
   background: var(--top-nav-bg);
@@ -22,10 +21,21 @@ const style = `
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   box-sizing: border-box;
 }
-.top-nav-left { display: flex; align-items: center; gap: 12px; }
-.top-nav-logo { font-size: 18px; font-weight: 700; color: #303133; letter-spacing: 1px; cursor: default; }
+.top-nav-logo { font-size: 18px; font-weight: 700; color: #303133; letter-spacing: 1px; cursor: default; white-space: nowrap; margin-right: 24px; }
 .top-nav-logo span { color: var(--top-nav-active); }
-.top-nav-right { display: flex; align-items: center; gap: 16px; position: relative; margin-left: auto; }
+.top-nav-center { display: flex; align-items: center; gap: 4px; flex: 1; overflow: hidden; }
+.top-nav-subnav-item {
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #606266;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.top-nav-subnav-item:hover { background: var(--top-nav-hover); color: #303133; }
+.top-nav-subnav-item.active { color: var(--top-nav-active); font-weight: 500; background: #ecf5ff; }
+.top-nav-right { display: flex; align-items: center; gap: 16px; position: relative; flex-shrink: 0; margin-left: 12px; }
 .top-nav-user { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
 .top-nav-user:hover { background: var(--top-nav-hover); }
 .top-nav-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--top-nav-active); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; }
@@ -48,13 +58,15 @@ const SUBSYSTEMS = [
 ];
 
 class ZawTopNav extends HTMLElement {
-  static observedAttributes = ['current', 'user-name', 'user-email'];
+  static observedAttributes = ['current', 'user-name', 'user-email', 'subnav'];
 
   constructor() {
     super();
     this._current = 'dashboard';
     this._userName = '';
     this._userEmail = '';
+    this._userRole = '';
+    this._subnav = [];
     this._dropdownOpen = false;
   }
 
@@ -62,11 +74,17 @@ class ZawTopNav extends HTMLElement {
     if (name === 'current') this._current = newVal || 'dashboard';
     if (name === 'user-name') this._userName = newVal || '';
     if (name === 'user-email') this._userEmail = newVal || '';
+    if (name === 'subnav') {
+      try { this._subnav = JSON.parse(newVal || '[]'); } catch (e) { this._subnav = []; }
+    }
     this.render();
   }
 
   connectedCallback() {
     this.shadow = this.attachShadow({ mode: 'open' });
+    if (!this._subnav.length) {
+      try { this._subnav = JSON.parse(this.getAttribute('subnav') || '[]'); } catch (e) {}
+    }
     this.readAuthState();
     this.render();
     this.addEventListener('click', (e) => this._handleClick(e));
@@ -91,6 +109,7 @@ class ZawTopNav extends HTMLElement {
         const parsed = JSON.parse(decodeURIComponent(ssoUser));
         if (!this._userName) this._userName = parsed.name || parsed.email || '';
         if (!this._userEmail) this._userEmail = parsed.email || '';
+        if (!this._userRole) this._userRole = parsed.role || '';
       } catch (e) {}
     }
 
@@ -100,12 +119,28 @@ class ZawTopNav extends HTMLElement {
         const parsed = JSON.parse(lsUser);
         if (!this._userName) this._userName = parsed.name || parsed.email || '';
         if (!this._userEmail) this._userEmail = parsed.email || '';
+        if (!this._userRole) this._userRole = parsed.role || '';
       }
     } catch (e) {}
+
+    if (!this._userRole) {
+      const dashRole = cookies['dash_role'];
+      if (dashRole) this._userRole = decodeURIComponent(dashRole);
+    }
+  }
+
+  visibleSubnav() {
+    if (!this._subnav.length) return [];
+    return this._subnav.filter(item => {
+      if (!item.roles) return true;
+      const allowed = item.roles.split(',');
+      return allowed.includes(this._userRole);
+    });
   }
 
   _handleClick(e) {
     const path = e.composedPath();
+
     const userArea = path.find(el => el.classList && el.classList.contains('top-nav-user'));
     if (userArea) {
       this._dropdownOpen = !this._dropdownOpen;
@@ -124,6 +159,21 @@ class ZawTopNav extends HTMLElement {
       this.render();
       return;
     }
+
+    const subItem = path.find(el => el.classList && el.classList.contains('top-nav-subnav-item'));
+    if (subItem) {
+      const url = subItem.dataset.url;
+      if (url) this.navigate(url);
+      return;
+    }
+  }
+
+  navigate(url) {
+    if (window.__zawNavHandler) {
+      const handled = window.__zawNavHandler(url);
+      if (handled) return;
+    }
+    window.location.href = url;
   }
 
   switchSubsystem(id) {
@@ -145,6 +195,7 @@ class ZawTopNav extends HTMLElement {
     const initial = (this._userName || this._userEmail || 'U').charAt(0).toUpperCase();
     const displayName = this._userName || this._userEmail || '用户';
     const ddClass = this._dropdownOpen ? ' open' : '';
+    const pathname = window.location.pathname;
 
     const dropdownOrder = ['dashboard', 'report', 'agent', 'iam'];
     const ddItemsHtml = dropdownOrder.map(id => {
@@ -154,10 +205,17 @@ class ZawTopNav extends HTMLElement {
       return `<div class="top-nav-dropdown-item${active}" data-subsystem="${id}">${sub.label}</div>`;
     }).join('');
 
+    const visibleItems = this.visibleSubnav();
+    const subnavHtml = visibleItems.map(item => {
+      const active = item.url === pathname || (item.url !== '/' && pathname.startsWith(item.url)) ? ' active' : '';
+      return `<span class="top-nav-subnav-item${active}" data-url="${item.url}">${item.label}</span>`;
+    }).join('');
+
     shadow.innerHTML = `
       <style>${style}</style>
       <div class="top-nav-container">
-        <div class="top-nav-left"><div class="top-nav-logo">Z<span>AW</span></div></div>
+        <div class="top-nav-logo">Z<span>AW</span></div>
+        <div class="top-nav-center">${subnavHtml}</div>
         <div class="top-nav-right">
           <div class="top-nav-user">
             <div class="top-nav-avatar">${initial}</div>
