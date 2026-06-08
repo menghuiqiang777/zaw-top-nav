@@ -21,8 +21,7 @@ const style = `
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   box-sizing: border-box;
 }
-.top-nav-logo { font-size: 18px; font-weight: 700; color: #303133; letter-spacing: 1px; cursor: default; white-space: nowrap; margin-right: 24px; }
-.top-nav-logo span { color: var(--top-nav-active); }
+.top-nav-logo { font-size: 18px; font-weight: 700; color: var(--top-nav-active); letter-spacing: 1px; cursor: default; white-space: nowrap; margin-right: 24px; }
 .top-nav-center { display: flex; align-items: center; gap: 4px; flex: 1; overflow: hidden; }
 .top-nav-subnav-item {
   padding: 6px 14px;
@@ -214,7 +213,7 @@ class ZawTopNav extends HTMLElement {
     shadow.innerHTML = `
       <style>${style}</style>
       <div class="top-nav-container">
-        <div class="top-nav-logo">Z<span>AW</span></div>
+        <div class="top-nav-logo">ZAW</div>
         <div class="top-nav-center">${subnavHtml}</div>
         <div class="top-nav-right">
           <div class="top-nav-user">
