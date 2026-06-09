@@ -182,10 +182,25 @@ class ZawTopNav extends HTMLElement {
   }
 
   logout() {
-    document.cookie = 'zaw_token=; path=/; domain=.zaw.zxtech.info; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = 'zaw_user=; path=/; domain=.zaw.zxtech.info; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const domain = !isLocalhost && hostname.endsWith('.zaw.zxtech.info') ? '.zaw.zxtech.info' : undefined;
+    const domainAttr = domain ? `;domain=${domain}` : '';
+    const secure = window.location.protocol === 'https:' ? ';Secure' : '';
+
+    const cookies = ['zaw_token', 'zaw_user', 'dash_token', 'dash_user_id', 'dash_role', 'dash_eid', 'dash_nick', 'dash_refresh', 'dash_expires', 'dash_role'];
+    for (const name of cookies) {
+      document.cookie = `${name}=;path=/${domainAttr};max-age=0${secure};SameSite=Lax`;
+      document.cookie = `${name}=;path=/;max-age=0${secure};SameSite=Lax`;
+    }
+
     localStorage.removeItem('zaw_token');
     localStorage.removeItem('zaw_user');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('expiresAt');
+    localStorage.removeItem('user');
+
     window.location.href = '/login';
   }
 
