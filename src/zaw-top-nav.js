@@ -53,7 +53,6 @@ const SUBSYSTEMS = [
   { id: 'dashboard', label: 'Dashboard', url: '/' },
   { id: 'iam', label: 'IAM', url: '/login/personal' },
   { id: 'report', label: 'Report', url: '/report' },
-  { id: 'agent', label: 'Agent', url: '/agent/' },
 ];
 
 class ZawTopNav extends HTMLElement {
@@ -211,7 +210,7 @@ class ZawTopNav extends HTMLElement {
     const ddClass = this._dropdownOpen ? ' open' : '';
     const pathname = window.location.pathname;
 
-    const dropdownOrder = ['dashboard', 'report', 'agent', 'iam'];
+    const dropdownOrder = ['dashboard', 'report', 'iam'];
     const ddItemsHtml = dropdownOrder.map(id => {
       const sub = SUBSYSTEMS.find(s => s.id === id);
       if (!sub) return '';
